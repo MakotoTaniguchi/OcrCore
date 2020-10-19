@@ -3,9 +3,18 @@
 *@
 @model OcrService.Models.AnalyzeViewModel
 
-<ul>
-    @foreach (var text in Model.AnalyzeTexts)
+
+@foreach (var pageRect in Model.PageRects)
+{
+<div style="position:relative; width:@string.Format($"{pageRect.Width}px"); height:@string.Format($"{pageRect.Height}px");">
+    @foreach (var lineText in pageRect.LineTexts)
     {
-        <li>@text</li>
+    <div style="position:absolute;
+                    top: @string.Format($"{lineText.Y}px");
+                    left: @string.Format($"{lineText.X}px");
+                    ">
+        @lineText.Text
+    </div>
     }
-</ul>
+</div>
+}

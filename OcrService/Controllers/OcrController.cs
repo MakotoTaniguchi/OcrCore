@@ -33,57 +33,51 @@ namespace OcrService.Controllers
         [ActionName("Analyze")]
         public IActionResult Analyze(List<IFormFile> files)
         {
-            var result = files.SelectMany(file =>
+            var pageRects = files.SelectMany(file =>
             {
                 var stream = file.OpenReadStream();
-                List<string> lines;
                 if (file.FileName.ToLower().Contains(".pdf"))
                 {
-                    lines = ConvertPdfToImage(stream);
-                }
-                else
-                {
-                    lines = OcrAnalyze(stream);
+                    return ConvertPdfToImage(stream);
                 }
 
-                return lines;
+                List<PageRect> pageRects = new List<PageRect>
+                {
+                    OcrAnalyze(stream)
+                };
+                return pageRects;
             }).ToList();
 
             var viewModel = new AnalyzeViewModel
             {
-                AnalyzeTexts = result
+                PageRects = pageRects
             };
 
             return View(viewModel);
         }
 
-        private List<string> ConvertPdfToImage(Stream stream)
+        private List<PageRect> ConvertPdfToImage(Stream stream)
         {
             var loadFromStreamAsyncTask = PdfDocument.LoadFromStreamAsync(stream.AsRandomAccessStream()).AsTask();
             loadFromStreamAsyncTask.Wait();
             var pdfDocument = loadFromStreamAsyncTask.Result;
 
             List<string> result = new List<string>();
-            for (var pageIndex = 0; pageIndex < pdfDocument.PageCount; pageIndex++)
+
+            return Enumerable.Range(0, (int)pdfDocument.PageCount).Select((index) =>
             {
-                using (PdfPage page = pdfDocument.GetPage((uint)pageIndex))
+                using (PdfPage page = pdfDocument.GetPage((uint)index))
+                using (var convertStream = new Windows.Storage.Streams.InMemoryRandomAccessStream())
                 {
-                    using (var convertStream = new Windows.Storage.Streams.InMemoryRandomAccessStream())
-                    {
-                        var renderToStreamAsyncTask = page.RenderToStreamAsync(convertStream).AsTask();
-                        renderToStreamAsyncTask.Wait();
+                    var renderToStreamAsyncTask = page.RenderToStreamAsync(convertStream).AsTask();
+                    renderToStreamAsyncTask.Wait();
 
-                        var texts = OcrAnalyze(convertStream.AsStream());
-
-                        result.AddRange(texts);
-                    }
+                    return OcrAnalyze(convertStream.AsStream());
                 }
-            }
-
-            return result;
+            }).ToList();
         }
 
-        private List<string> OcrAnalyze(Stream stream)
+        private PageRect OcrAnalyze(Stream stream)
         {
             var createAsyncTask = BitmapDecoder.CreateAsync(stream.AsRandomAccessStream()).AsTask();
             createAsyncTask.Wait();
@@ -102,12 +96,30 @@ namespace OcrService.Controllers
 
             var ocrResult = recognizeAsyncTask.Result;
 
-            var lines = ocrResult.Lines.Select(ocrLine =>
+            var lineRects =  ocrResult.Lines.SelectMany(ocrLine =>
             {
-                return ocrLine.Text;
+                return ocrLine.Words.Select(word =>
+                {
+                    return new LineText
+                    {
+                        Height = (int)word.BoundingRect.Height,
+                        Width = (int)word.BoundingRect.Width,
+                        Top = (int)word.BoundingRect.Top,
+                        Left = (int)word.BoundingRect.Left,
+                        X = (int)word.BoundingRect.X,
+                        Y = (int)word.BoundingRect.Y,
+                        Text = word.Text,
+                        FontSize = word.BoundingRect.Height >= word.BoundingRect.Width ? (int)word.BoundingRect.Height : (int)word.BoundingRect.Width
+                    };
+                });
             }).ToList();
-            
-            return lines;
+
+            return new PageRect
+            {
+                Height = softwareBitmap.PixelHeight,
+                Width = softwareBitmap.PixelWidth,
+                LineTexts = lineRects
+            };
         }
     }
 }
