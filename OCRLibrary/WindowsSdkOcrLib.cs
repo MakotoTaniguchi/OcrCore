@@ -10,17 +10,9 @@ using Windows.Media.Ocr;
 
 namespace OCRLibrary
 {
-    public class WindowsSdkOcrLib : PdfLib
+    public class WindowsSdkOcrLib : BaseLib
     {
-        public List<PageRect> ConvertPdfToImage(Stream stream)
-        {
-            return ConvertPdfToStream(stream).Select(convertStream =>
-            {
-                return OcrAnalyze(convertStream);
-            }).ToList();
-        }
-
-        public PageRect OcrAnalyze(Stream stream)
+        public override PageRect OcrAnalyze(Stream stream)
         {
             var createAsyncTask = BitmapDecoder.CreateAsync(stream.AsRandomAccessStream()).AsTask();
             createAsyncTask.Wait();

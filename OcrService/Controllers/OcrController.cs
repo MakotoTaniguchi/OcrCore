@@ -23,25 +23,22 @@ namespace OcrService.Controllers
         [ActionName("Index")]
         public IActionResult Index()
         {
-            return new RedirectResult("/Ocr/Input");
+            return new RedirectResult("/Ocr/Select");
         }
 
+        [ActionName("Select")]
+        public IActionResult Select()
+        {
+            return View();
+        }
+
+        #region Windows SDK
         [ActionName("WindowsSDKInput")]
         public IActionResult Input()
         {
             var viewModel = new InputViewModel
             {
                 RequestUrl = @"/Ocr/WindowsSDKAnalyze"
-            };
-            return View("Input", viewModel);
-        }
-
-        [ActionName("GcpInput")]
-        public IActionResult GcpInput()
-        {
-            var viewModel = new InputViewModel
-            {
-                RequestUrl = @"/Ocr/GcpAnalyze"
             };
             return View("Input", viewModel);
         }
@@ -72,6 +69,18 @@ namespace OcrService.Controllers
 
             return View("Analyze", viewModel);
         }
+        #endregion
+
+        #region Google Cloud Vision API
+        [ActionName("GcpInput")]
+        public IActionResult GcpInput()
+        {
+            var viewModel = new InputViewModel
+            {
+                RequestUrl = @"/Ocr/GcpAnalyze"
+            };
+            return View("Input", viewModel);
+        }
 
         [ActionName("GcpAnalyze")]
         public IActionResult GcpAnalyze(List<IFormFile> files)
@@ -101,5 +110,88 @@ namespace OcrService.Controllers
 
             return View("Analyze", viewModel);
         }
+        #endregion
+
+        #region Azure Computer Vision 3.1 REST API
+        [ActionName("AzureInput")]
+        public IActionResult AzureInput()
+        {
+            var viewModel = new InputViewModel
+            {
+                RequestUrl = @"/Ocr/AzureAnalyze"
+            };
+            return View("Input", viewModel);
+        }
+
+        [ActionName("AzureAnalyze")]
+        public IActionResult AzureAnalyze(List<IFormFile> files)
+        {
+            var azureComputerVisionLib = new AzureComputerVisionLib();
+
+            var pageRects = files.SelectMany(file =>
+            {
+                var stream = file.OpenReadStream();
+                if (file.FileName.ToLower().Contains(".pdf"))
+                {
+                    return azureComputerVisionLib.ConvertPdfToImage(stream);
+                }
+
+                List<PageRect> pageRects = new List<PageRect>
+                {
+                    azureComputerVisionLib.OcrAnalyze(stream)
+                };
+
+                return pageRects;
+            }).ToList();
+
+            var viewModel = new AnalyzeViewModel
+            {
+                PageRects = pageRects
+            };
+
+            return View("Analyze", viewModel);
+        }
+        #endregion
+
+        #region Amazon Textract API
+        [ActionName("AmazonInput")]
+        public IActionResult AmazonInput()
+        {
+            var viewModel = new InputViewModel
+            {
+                RequestUrl = @"/Ocr/AmazonAnalyze"
+            };
+            return View("Input", viewModel);
+        }
+
+        [ActionName("AmazonAnalyze")]
+        public IActionResult AmazonAnalyze(List<IFormFile> files)
+        {
+            var amazonTextractLib = new AmazonTextractLib();
+
+            var pageRects = files.SelectMany(file =>
+            {
+                var stream = file.OpenReadStream();
+                if (file.FileName.ToLower().Contains(".pdf"))
+                {
+                    return amazonTextractLib.ConvertPdfToImage(stream);
+                }
+
+                List<PageRect> pageRects = new List<PageRect>
+                {
+                    amazonTextractLib.OcrAnalyze(stream)
+                };
+
+                return pageRects;
+            }).ToList();
+
+            var viewModel = new AnalyzeViewModel
+            {
+                PageRects = pageRects
+            };
+
+            return View("Analyze", viewModel);
+        }
+        #endregion
     }
 }

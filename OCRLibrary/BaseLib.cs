@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OCRLibrary.Dtos;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,8 +8,18 @@ using Windows.Data.Pdf;
 
 namespace OCRLibrary
 {
-    public class PdfLib
+    public abstract class BaseLib
     {
+        public abstract PageRect OcrAnalyze(Stream stream);
+
+        public List<PageRect> ConvertPdfToImage(Stream stream)
+        {
+            return ConvertPdfToStream(stream).Select(convertStream =>
+            {
+                return OcrAnalyze(convertStream);
+            }).ToList();
+        }
+
         protected List<Stream> ConvertPdfToStream(Stream stream)
         {
             var loadFromStreamAsyncTask = PdfDocument.LoadFromStreamAsync(stream.AsRandomAccessStream()).AsTask();

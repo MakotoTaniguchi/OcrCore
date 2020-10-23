@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Views\Ocr\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\OCRLibrary\OCRLibrary.csproj" />
   </ItemGroup>
 

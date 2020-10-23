@@ -9,17 +9,9 @@ using Windows.Graphics.Imaging;
 
 namespace OCRLibrary
 {
-    public class GoogleCloudVisionLib : PdfLib
+    public class GoogleCloudVisionLib : BaseLib
     {
-        public List<PageRect> ConvertPdfToImage(Stream stream)
-        {
-            return ConvertPdfToStream(stream).Select(convertStream =>
-            {
-                return OcrAnalyze(convertStream);
-            }).ToList();
-        }
-
-        public PageRect OcrAnalyze(Stream stream)
+        public override PageRect OcrAnalyze(Stream stream)
         {
             var imageStream = new MemoryStream();
             stream.CopyTo(imageStream);
