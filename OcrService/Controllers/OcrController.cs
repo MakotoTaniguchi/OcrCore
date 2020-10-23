@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using OCRLibrary;
+using OCRLibrary.Dtos;
 using OcrService.Models;
 using Windows.Data.Pdf;
 using Windows.Globalization;
@@ -24,26 +26,41 @@ namespace OcrService.Controllers
             return new RedirectResult("/Ocr/Input");
         }
 
-        [ActionName("Input")]
+        [ActionName("WindowsSDKInput")]
         public IActionResult Input()
         {
-            return View();
+            var viewModel = new InputViewModel
+            {
+                RequestUrl = @"/Ocr/WindowsSDKAnalyze"
+            };
+            return View("Input", viewModel);
         }
 
-        [ActionName("Analyze")]
-        public IActionResult Analyze(List<IFormFile> files)
+        [ActionName("GcpInput")]
+        public IActionResult GcpInput()
         {
+            var viewModel = new InputViewModel
+            {
+                RequestUrl = @"/Ocr/GcpAnalyze"
+            };
+            return View("Input", viewModel);
+        }
+
+        [ActionName("WindowsSDKAnalyze")]
+        public IActionResult WindowsSDKAnalyze(List<IFormFile> files)
+        {
+            var windowsSdkOcrLib = new WindowsSdkOcrLib();
             var pageRects = files.SelectMany(file =>
             {
                 var stream = file.OpenReadStream();
                 if (file.FileName.ToLower().Contains(".pdf"))
                 {
-                    return ConvertPdfToImage(stream);
+                    return windowsSdkOcrLib.ConvertPdfToImage(stream);
                 }
 
                 List<PageRect> pageRects = new List<PageRect>
                 {
-                    OcrAnalyze(stream)
+                    windowsSdkOcrLib.OcrAnalyze(stream)
                 };
                 return pageRects;
             }).ToList();
@@ -53,73 +70,36 @@ namespace OcrService.Controllers
                 PageRects = pageRects
             };
 
-            return View(viewModel);
+            return View("Analyze", viewModel);
         }
 
-        private List<PageRect> ConvertPdfToImage(Stream stream)
+        [ActionName("GcpAnalyze")]
+        public IActionResult GcpAnalyze(List<IFormFile> files)
         {
-            var loadFromStreamAsyncTask = PdfDocument.LoadFromStreamAsync(stream.AsRandomAccessStream()).AsTask();
-            loadFromStreamAsyncTask.Wait();
-            var pdfDocument = loadFromStreamAsyncTask.Result;
+            var googleCloudVisionLib = new GoogleCloudVisionLib();
 
-            List<string> result = new List<string>();
-
-            return Enumerable.Range(0, (int)pdfDocument.PageCount).Select((index) =>
+            var pageRects = files.SelectMany(file =>
             {
-                using (PdfPage page = pdfDocument.GetPage((uint)index))
-                using (var convertStream = new Windows.Storage.Streams.InMemoryRandomAccessStream())
+                var stream = file.OpenReadStream();
+                if (file.FileName.ToLower().Contains(".pdf"))
                 {
-                    var renderToStreamAsyncTask = page.RenderToStreamAsync(convertStream).AsTask();
-                    renderToStreamAsyncTask.Wait();
-
-                    return OcrAnalyze(convertStream.AsStream());
+                    return googleCloudVisionLib.ConvertPdfToImage(stream);
                 }
-            }).ToList();
-        }
 
-        private PageRect OcrAnalyze(Stream stream)
-        {
-            var createAsyncTask = BitmapDecoder.CreateAsync(stream.AsRandomAccessStream()).AsTask();
-            createAsyncTask.Wait();
-            var bitmapDecoder = createAsyncTask.Result;
-
-            var getSoftwareBitmapAsyncTask = bitmapDecoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8,
-                                                BitmapAlphaMode.Premultiplied).AsTask();
-            getSoftwareBitmapAsyncTask.Wait();
-            SoftwareBitmap softwareBitmap = getSoftwareBitmapAsyncTask.Result;
-
-            IReadOnlyList<Language> langList = OcrEngine.AvailableRecognizerLanguages;
-            var ocrEngine = OcrEngine.TryCreateFromLanguage(langList[0]);
-
-            var recognizeAsyncTask = ocrEngine.RecognizeAsync(softwareBitmap).AsTask();
-            recognizeAsyncTask.Wait();
-
-            var ocrResult = recognizeAsyncTask.Result;
-
-            var lineRects =  ocrResult.Lines.SelectMany(ocrLine =>
-            {
-                return ocrLine.Words.Select(word =>
+                List<PageRect> pageRects = new List<PageRect>
                 {
-                    return new LineText
-                    {
-                        Height = (int)word.BoundingRect.Height,
-                        Width = (int)word.BoundingRect.Width,
-                        Top = (int)word.BoundingRect.Top,
-                        Left = (int)word.BoundingRect.Left,
-                        X = (int)word.BoundingRect.X,
-                        Y = (int)word.BoundingRect.Y,
-                        Text = word.Text,
-                        FontSize = word.BoundingRect.Height >= word.BoundingRect.Width ? (int)word.BoundingRect.Height : (int)word.BoundingRect.Width
-                    };
-                });
+                    googleCloudVisionLib.OcrAnalyze(stream)
+                };
+
+                return pageRects;
             }).ToList();
 
-            return new PageRect
+            var viewModel = new AnalyzeViewModel
             {
-                Height = softwareBitmap.PixelHeight,
-                Width = softwareBitmap.PixelWidth,
-                LineTexts = lineRects
+                PageRects = pageRects
             };
+
+            return View("Analyze", viewModel);
         }
     }
 }
