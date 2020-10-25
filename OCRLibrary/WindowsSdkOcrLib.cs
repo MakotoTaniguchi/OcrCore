@@ -23,8 +23,9 @@ namespace OCRLibrary
             getSoftwareBitmapAsyncTask.Wait();
             SoftwareBitmap softwareBitmap = getSoftwareBitmapAsyncTask.Result;
 
-            IReadOnlyList<Language> langList = OcrEngine.AvailableRecognizerLanguages;
-            var ocrEngine = OcrEngine.TryCreateFromLanguage(langList[0]);
+            //IReadOnlyList<Language> langList = OcrEngine.AvailableRecognizerLanguages;
+            Windows.Globalization.Language language = new Windows.Globalization.Language("ja");
+            var ocrEngine = OcrEngine.TryCreateFromLanguage(language);
 
             var recognizeAsyncTask = ocrEngine.RecognizeAsync(softwareBitmap).AsTask();
             recognizeAsyncTask.Wait();
