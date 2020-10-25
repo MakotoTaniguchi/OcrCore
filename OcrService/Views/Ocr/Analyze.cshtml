@@ -1,0 +1,20 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@model OcrService.Models.AnalyzeViewModel
+
+
+@foreach (var pageRect in Model.PageRects)
+{
+<div style="position:relative; width:@string.Format($"{pageRect.Width}px"); height:@string.Format($"{pageRect.Height}px");">
+    @foreach (var lineText in pageRect.LineTexts)
+    {
+    <div style="position:absolute;
+                    top: @string.Format($"{lineText.Y}px");
+                    left: @string.Format($"{lineText.X}px");
+                    ">
+        @lineText.Text
+    </div>
+    }
+</div>
+}
