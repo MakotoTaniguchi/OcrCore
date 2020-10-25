@@ -1,2 +1,2 @@
 cd /d %~dp0
-dotnet watch run
+dotnet run
