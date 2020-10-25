@@ -22,7 +22,7 @@ namespace OCRLibrary
         private static string endpoint = Environment.GetEnvironmentVariable("COMPUTER_VISION_ENDPOINT");
 
         // the Batch Read method endpoint
-        private static string uriBase = endpoint + "/vision/v3.1/read/analyze";
+        private static string uriBase = endpoint + "/vision/v3.1-preview.2/read/analyze?language=ja";
 
         public override PageRect OcrAnalyze(Stream stream)
         {
